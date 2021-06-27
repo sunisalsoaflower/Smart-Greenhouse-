@@ -1,1 +1,2 @@
 # Smart-Greenhouse-
+A project created by yours truly and a close friend. Its basic idea revolves around the beauty of technology and science; how to use something simple to implement impactful changes. Like for starters, using the smart greenhouse, you can easily control the reaction kinetics at an industrial level or increase your crop yield by a huge margin and so on. You get the drift right? Anyways knock yourselves out with this one and let me know if there is anyway I can further improve this. Au revoir!
