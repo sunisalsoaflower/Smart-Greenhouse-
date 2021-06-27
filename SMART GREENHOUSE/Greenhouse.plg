@@ -1,0 +1,7 @@
+compiling HN code.c...
+.\HN CODE.C(98): warning C182: pointer to different objects
+.\HN CODE.C(99): warning C182: pointer to different objects
+.\HN code.c - 0 Error(s), 2 Warning(s).
+Build target 'Target 1'
+linking...
+"HN Greenhouse" - 0 Error(s), 0 Warning(s).

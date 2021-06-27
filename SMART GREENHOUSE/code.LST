@@ -1,0 +1,224 @@
+C51 COMPILER V6.12  HN_CODE                                                                06/14/2021 16:12:07 PAGE 1   
+
+
+C51 COMPILER V6.12, COMPILATION OF MODULE HN_CODE
+OBJECT MODULE PLACED IN .\HN code.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE .\HN code.c DEBUG OBJECTEXTEND
+
+stmt level    source
+
+   1          #include<reg51.h>
+   2          #include<stdio.h>
+   3          
+   4          //INPUTS
+   5          
+   6          #define input_port P1  //ADC
+   7          sbit ADDA=P3^0;  //Address pins for selecting input channels.
+   8          sbit ADDB=P3^1;
+   9          sbit ADDC=P3^2;
+  10          sbit ale=P3^3;  
+  11          sbit oe=P3^6; 
+  12          sbit sc=P3^4; 
+  13          sbit eoc=P3^5;  
+  14          sbit clk=P3^7;  
+  15          
+  16          sbit manual = P2^7;
+  17          
+  18          // OUTPUTS
+  19          
+  20          #define lcdport P0  //LCD
+  21          sbit rs=P0^0;
+  22          sbit rw=P0^2;
+  23          sbit en=P0^1;
+  24          
+  25          sbit cooler = P2^0;   
+  26          sbit heater = P2^1;
+  27          sbit UV = P2^2;
+  28          sbit motor = P2^3;
+  29          
+  30          
+  31          int result[3],number;
+  32          
+  33          void timer0() interrupt 1  // Function to generate clock of frequency 500KHZ using Timer 0 interrupt.
+  34          {
+  35   1      clk=~clk;
+  36   1      }
+  37          
+  38          void delay(unsigned int count)    // Delay Function
+  39          {
+  40   1      int i,j;
+  41   1      for(i=0;i<count;i++)
+  42   1        for(j=0;j<100;j++);
+  43   1      }
+  44          
+  45          void daten()   // Function to send data to lcd and print
+  46          {
+  47   1          rs=1;
+  48   1          rw=0;
+  49   1          en=1;
+  50   1          delay(1);
+  51   1          en=0;
+  52   1      }
+  53          
+  54          void lcd_data(unsigned char ch)   // LCD data processed 
+  55          {
+C51 COMPILER V6.12  HN_CODE                                                                06/14/2021 16:12:07 PAGE 2   
+
+  56   1          lcdport=ch & 0xF0;
+  57   1          daten();
+  58   1          lcdport=ch<<4 & 0xF0;
+  59   1          daten();
+  60   1      }
+  61          
+  62          void cmden(void)   // LCD commands sent to lcd
+  63          {
+  64   1          rs=0;
+  65   1          en=1;
+  66   1          delay(1);
+  67   1          en=0;
+  68   1      }
+  69          
+  70          void lcdcmd(unsigned char ch)  // LCD commands processed
+  71          {
+  72   1      
+  73   1          lcdport=ch & 0xf0;
+  74   1          cmden();
+  75   1          lcdport=ch<<4 & 0xF0;
+  76   1          cmden();
+  77   1      }
+  78          
+  79          lcdprint(unsigned char *str)  //Function to send string data to LCD.
+  80          {
+  81   1          while(*str)
+  82   1          {
+  83   2              lcd_data(*str);
+  84   2              str++;
+  85   2          }
+  86   1      }
+  87          
+  88          void lcd_ini()  //Function to inisialize the LCD
+  89          {
+  90   1          lcdcmd(0x02);
+  91   1          lcdcmd(0x28);
+  92   1          lcdcmd(0x0e);
+  93   1          lcdcmd(0x01);
+  94   1      }
+  95          
+  96          void show()       // Function to convert value to string to be able to print
+  97          { 
+  98   1         sprintf(result,"%d",number);
+*** WARNING C182 IN LINE 98 OF .\HN CODE.C: pointer to different objects
+  99   1         lcdprint(result);
+*** WARNING C182 IN LINE 99 OF .\HN CODE.C: pointer to different objects
+ 100   1         lcdprint("  ");
+ 101   1      }
+ 102          
+ 103          void read_adc()    // To read adc value, and save it
+ 104          {
+ 105   1         number=0;
+ 106   1         ale=1;
+ 107   1         sc=1;
+ 108   1         delay(1);
+ 109   1         ale=0;
+ 110   1         sc=0;
+ 111   1         while(eoc==1);
+ 112   1         while(eoc==0);
+ 113   1         oe=1;
+ 114   1         number=input_port;
+ 115   1         delay(1);
+C51 COMPILER V6.12  HN_CODE                                                                06/14/2021 16:12:07 PAGE 3   
+
+ 116   1         oe=0;
+ 117   1      }
+ 118          
+ 119          void adc(int i)  //Function to drive ADC
+ 120          {
+ 121   1      switch(i)
+ 122   1        {
+ 123   2         case 0:
+ 124   2          ADDC=0;  // Selecting input channel IN0 (Temperature) using address lines
+ 125   2          ADDB=0;
+ 126   2          ADDA=0;
+ 127   2          lcdcmd(0xc0);
+ 128   2          read_adc();
+ 129   2      	number = number *2;
+ 130   2      	if (number > 20 ) {cooler = 1; heater = 0;}  // If else conditions to bring about change
+ 131   2      	if (number < 15 ) {heater = 1; cooler = 0;}
+ 132   2      	else {heater = 0; cooler = 0;}
+ 133   2          show();
+ 134   2          break;
+ 135   2      
+ 136   2         case 1:
+ 137   2          ADDC=0;  // Selecting input channel IN1 (Light) using address lines
+ 138   2          ADDB=0;
+ 139   2          ADDA=1;
+ 140   2          lcdcmd(0xc6);
+ 141   2          read_adc();
+ 142   2      	number = 100 - number/10;
+ 143   2      	if (number < 80 ) {UV = 1;}  // If else conditions to bring about change
+ 144   2      	else {UV = 0;}
+ 145   2          show();
+ 146   2         break;
+ 147   2      
+ 148   2         case 2:
+ 149   2          ADDC=0;  // Selecting input channel IN2 (Soil Moisture) using address lines
+ 150   2          ADDB=1;
+ 151   2          ADDA=0;
+ 152   2          lcdcmd(0xcc);
+ 153   2          read_adc();
+ 154   2          if (number < 100 ) {motor = 1; delay(100); motor =0;} // If else conditions to bring about change
+ 155   2          show();
+ 156   2          break;
+ 157   2        }
+ 158   1      }
+ 159          
+ 160          void main()
+ 161          {
+ 162   1       int i=0;
+ 163   1       P2 = 0;
+ 164   1       eoc=1;
+ 165   1       ale=0;
+ 166   1       oe=0;
+ 167   1       sc=0;
+ 168   1       TMOD=0x02;
+ 169   1       TH0=0xFD;
+ 170   1      lcd_ini();
+ 171   1      lcdprint(" ADC 0808  ");
+ 172   1      lcdcmd(192);
+ 173   1      lcdprint("  Interfacing   ");
+ 174   1      delay(500);
+ 175   1      lcdcmd(1);
+ 176   1      lcdprint("Circuit Digest ");
+ 177   1      lcdcmd(192);
+C51 COMPILER V6.12  HN_CODE                                                                06/14/2021 16:12:07 PAGE 4   
+
+ 178   1      lcdprint("System Ready...   ");
+ 179   1      delay(500);
+ 180   1      lcdcmd(1);
+ 181   1      lcdprint("Ch1   Ch2   Ch3 ");
+ 182   1       IE=0x82;
+ 183   1       TR0=1;
+ 184   1      while(1)
+ 185   1      {
+ 186   2      if ( manual == 1 ) {motor = 1; delay(100); motor =0;}   // To manually turn on motor
+ 187   2         for(i=0;i<3;i++)
+ 188   2         {
+ 189   3           adc(i);
+ 190   3           number=0;
+ 191   3         }
+ 192   2      }
+ 193   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    574    ----
+   CONSTANT SIZE    =     87    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      8       5
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  2 WARNING(S),  0 ERROR(S)
